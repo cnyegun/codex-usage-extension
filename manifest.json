@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Codex Usage Viewer",
+  "description": "Shows your Codex usage from ChatGPT's Codex analytics page.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Codex Usage"
+  },
+  "host_permissions": ["https://chatgpt.com/*"],
+  "permissions": ["storage"]
+}

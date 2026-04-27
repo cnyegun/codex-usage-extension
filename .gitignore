@@ -1,0 +1,4 @@
+*.har
+*.log
+*.zip
+web-ext-artifacts/

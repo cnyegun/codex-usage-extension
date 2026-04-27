@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Codex Usage</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Codex</p>
+        <h1>Usage</h1>
+      </div>
+      <button id="refresh" type="button">Refresh</button>
+    </header>
+
+    <main>
+      <section id="status" class="status">Loading usage...</section>
+
+      <section id="skeleton" class="skeleton" hidden aria-label="Loading usage">
+        <article class="quota-card">
+          <span class="skeleton-line"></span>
+          <span class="skeleton-meter"></span>
+          <div class="skeleton-row">
+            <span class="skeleton-line value"></span>
+            <span class="skeleton-line medium"></span>
+          </div>
+        </article>
+
+        <article class="quota-card">
+          <span class="skeleton-line"></span>
+          <span class="skeleton-meter"></span>
+          <div class="skeleton-row">
+            <span class="skeleton-line value"></span>
+            <span class="skeleton-line medium"></span>
+          </div>
+        </article>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span class="skeleton-line"></span>
+            <span class="skeleton-line value small"></span>
+          </article>
+
+          <article class="summary-card">
+            <span class="skeleton-line"></span>
+            <span class="skeleton-line value small"></span>
+          </article>
+        </div>
+      </section>
+
+      <section id="snapshot" hidden>
+        <div id="quota-grid" class="quota-grid"></div>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span>Plan</span>
+            <strong id="plan-value">-</strong>
+          </article>
+
+          <article class="summary-card">
+            <span>Credits</span>
+            <strong id="credits-value">-</strong>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
