@@ -6,7 +6,6 @@
   --border: #5c5c5c;
   --text: #f0f0f0;
   --muted: #afafaf;
-  --meter: #5c5c5c;
   background: var(--bg);
   color: var(--text);
 }
@@ -132,12 +131,16 @@ main {
   font-size: 12px;
 }
 
-.meter {
+.meter,
+.skeleton-meter {
   height: 8px;
   margin: 14px 0 10px;
+}
+
+.meter {
   overflow: hidden;
   border-radius: 999px;
-  background: var(--meter);
+  background: var(--border);
 }
 
 .meter-fill {
@@ -186,7 +189,7 @@ main {
   display: block;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--meter);
+  background: var(--border);
   position: relative;
 }
 
@@ -218,11 +221,6 @@ main {
   height: 23px;
   margin-top: 10px;
   width: 54px;
-}
-
-.skeleton-meter {
-  height: 8px;
-  margin: 14px 0 10px;
 }
 
 @keyframes pulse {

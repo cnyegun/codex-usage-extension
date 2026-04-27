@@ -1,6 +1,6 @@
 # Codex Usage Viewer
 
-A minimal Firefox/Chrome/Edge extension that shows your Codex usage from ChatGPT's analytics page:
+A minimal Firefox/Chrome/Edge extension that shows your Codex usage from ChatGPT:
 
 `https://chatgpt.com/codex/cloud/settings/analytics#usage`
 
@@ -22,8 +22,8 @@ Firefox removes temporary add-ons when the browser restarts.
 ## Use
 
 1. Sign in to ChatGPT in the same browser profile.
-2. Click the extension icon.
-3. Click `Refresh`.
+2. Click the extension icon. It refreshes automatically.
+3. Use `Refresh` to retry manually.
 
 The extension calls ChatGPT's Codex usage endpoint directly:
 

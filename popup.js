@@ -2,6 +2,11 @@ const SNAPSHOT_KEY = "codexUsageSnapshotV3";
 const AUTH_SESSION_URL = "https://chatgpt.com/api/auth/session";
 const USAGE_API_URL = "https://chatgpt.com/backend-api/wham/usage";
 const USAGE_API_PATH = "/backend-api/wham/usage";
+const RATE_LIMIT_WINDOWS = ["primary_window", "secondary_window"];
+const FIVE_HOUR_WINDOW_SECONDS = 6 * 60 * 60;
+const WEEKLY_WINDOW_SECONDS = 6 * 24 * 60 * 60;
+const RESET_EPOCH_MS_THRESHOLD = 10 ** 11;
+const SIGN_IN_HELP = "If this persists, open ChatGPT once in this Firefox profile and sign in again.";
 
 const extensionApi = globalThis.browser || globalThis.chrome;
 const usesPromiseApi = Boolean(globalThis.browser);
@@ -20,35 +25,22 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit"
 });
 
-function runtimeError() {
-  return usesPromiseApi ? null : extensionApi.runtime.lastError;
-}
-
-function storageGet(keys) {
-  if (usesPromiseApi) return extensionApi.storage.local.get(keys);
+function storageLocal(method, value) {
+  if (usesPromiseApi) return extensionApi.storage.local[method](value);
 
   return new Promise((resolve, reject) => {
-    extensionApi.storage.local.get(keys, (result) => {
-      const error = runtimeError();
+    extensionApi.storage.local[method](value, (result) => {
+      const error = extensionApi.runtime.lastError;
       if (error) reject(new Error(error.message));
       else resolve(result);
     });
   });
 }
 
-function storageSet(value) {
-  if (usesPromiseApi) return extensionApi.storage.local.set(value);
+const storageGet = (keys) => storageLocal("get", keys);
+const storageSet = (value) => storageLocal("set", value);
 
-  return new Promise((resolve, reject) => {
-    extensionApi.storage.local.set(value, () => {
-      const error = runtimeError();
-      if (error) reject(new Error(error.message));
-      else resolve();
-    });
-  });
-}
-
-function showOnly(element) {
+function showView(element) {
   statusEl.hidden = element !== statusEl;
   skeletonEl.hidden = element !== skeletonEl;
   snapshotEl.hidden = element !== snapshotEl;
@@ -56,16 +48,12 @@ function showOnly(element) {
 
 function setStatus(message) {
   statusEl.textContent = message;
-  showOnly(statusEl);
+  showView(statusEl);
 }
 
 function setRefreshBusy(isBusy) {
   refreshButton.disabled = isBusy;
   refreshButton.textContent = isBusy ? "Refreshing..." : "Refresh";
-}
-
-function formatDateTime(value) {
-  return dateTimeFormatter.format(new Date(value));
 }
 
 function formatTimeRemaining(value) {
@@ -84,16 +72,16 @@ function formatPercent(value) {
 }
 
 function quotaWindowName(quota) {
-  const seconds = quota?.limit_window_seconds;
-  if (seconds <= 6 * 60 * 60) return "5-hour";
-  if (seconds >= 6 * 24 * 60 * 60) return "Weekly";
+  const seconds = Number(quota?.limit_window_seconds);
+  if (seconds <= FIVE_HOUR_WINDOW_SECONDS) return "5-hour";
+  if (seconds >= WEEKLY_WINDOW_SECONDS) return "Weekly";
   return "Usage";
 }
 
 function toResetDate(quota) {
   const resetAt = quota?.reset_at;
   if (typeof resetAt !== "number") return null;
-  return new Date(resetAt > 10 ** 11 ? resetAt : resetAt * 1000);
+  return new Date(resetAt > RESET_EPOCH_MS_THRESHOLD ? resetAt : resetAt * 1000);
 }
 
 function decodeJwtPayload(token) {
@@ -185,21 +173,21 @@ async function fetchCodexUsage() {
   return fetchJson(USAGE_API_URL, { headers });
 }
 
-function normalizeWindow(quota) {
+function normalizeQuotaWindow(quota) {
   if (!quota || typeof quota !== "object") return null;
 
   const usedPercent = Number(quota.used_percent);
   return {
     name: quotaWindowName(quota),
-    remainingPercent: Number.isFinite(usedPercent) ? Math.max(0, 100 - usedPercent) : 0,
+    remainingPercent: Number.isFinite(usedPercent) ? clampPercent(100 - usedPercent) : 0,
     resetAt: toResetDate(quota)
   };
 }
 
 function normalizeUsage(data) {
   const rateLimit = data.rate_limit || {};
-  const windows = ["primary_window", "secondary_window"]
-    .map((key) => normalizeWindow(rateLimit[key]))
+  const windows = RATE_LIMIT_WINDOWS
+    .map((key) => normalizeQuotaWindow(rateLimit[key]))
     .filter(Boolean);
 
   return {
@@ -231,6 +219,12 @@ function textElement(tagName, className, text) {
   return element;
 }
 
+function resetText(quota) {
+  if (!quota.resetAt) return "Reset unknown";
+  if (quota.name === "5-hour") return `Resets in ${formatTimeRemaining(quota.resetAt)}`;
+  return `Resets ${dateTimeFormatter.format(quota.resetAt)}`;
+}
+
 function createQuotaCard(quota) {
   const card = document.createElement("article");
   card.className = "quota-card";
@@ -245,15 +239,10 @@ function createQuotaCard(quota) {
 
   const footer = document.createElement("div");
   footer.className = "quota-footer";
-  const resetText = quota.resetAt
-    ? quota.name === "5-hour"
-      ? `Resets in ${formatTimeRemaining(quota.resetAt)}`
-      : `Resets ${formatDateTime(quota.resetAt)}`
-    : "Reset unknown";
 
   footer.append(
     textElement("strong", "quota-value", `${formatPercent(quota.remainingPercent)} left`),
-    textElement("span", "quota-reset", resetText)
+    textElement("span", "quota-reset", resetText(quota))
   );
 
   card.append(textElement("span", "quota-title", `${quota.name} limit`), meter, footer);
@@ -267,7 +256,7 @@ function renderSnapshot(snapshot) {
     return;
   }
 
-  showOnly(snapshotEl);
+  showView(snapshotEl);
   quotaGridEl.replaceChildren(...snapshot.windows.map(createQuotaCard));
 
   planValueEl.textContent = titleCase(snapshot.planType);
@@ -277,27 +266,28 @@ function renderSnapshot(snapshot) {
 async function load() {
   const state = await storageGet(SNAPSHOT_KEY);
   const snapshot = state[SNAPSHOT_KEY];
+  const hasSnapshot = Boolean(snapshot?.windows?.length);
 
-  if (snapshot?.windows?.length) {
+  if (hasSnapshot) {
     renderSnapshot(snapshot);
   } else {
-    showOnly(skeletonEl);
+    showView(skeletonEl);
   }
 
-  await refresh({ quiet: Boolean(snapshot?.windows?.length) });
+  await refresh({ quiet: hasSnapshot });
 }
 
 async function refresh({ quiet = false } = {}) {
   try {
     setRefreshBusy(true);
-    if (!quiet) showOnly(skeletonEl);
+    if (!quiet) showView(skeletonEl);
     const rawUsage = await fetchCodexUsage();
     const snapshot = normalizeUsage(rawUsage);
     await storageSet({ [SNAPSHOT_KEY]: snapshot });
     renderSnapshot(snapshot);
   } catch (error) {
     if (!quiet) {
-      setStatus(`${error.message} If this persists, open ChatGPT once in this Firefox profile and sign in again.`);
+      setStatus(`${error.message} ${SIGN_IN_HELP}`);
     }
   } finally {
     setRefreshBusy(false);
