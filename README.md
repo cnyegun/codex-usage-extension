@@ -4,6 +4,8 @@
 
 **A tiny browser extension that shows your Codex usage from ChatGPT.**
 
+<img src="picture.png" alt="Codex Usage Viewer popup" width="420">
+
 [MIT License](LICENSE)
 
 </div>
@@ -34,4 +36,4 @@ Firefox removes temporary add-ons when it restarts.
 
 - Calls `https://chatgpt.com/api/auth/session` and `https://chatgpt.com/backend-api/wham/usage`.
 - Stores only the latest parsed usage snapshot in extension storage.
-- Does not request cookie access.
+- Does not request the browser cookies permission. Requests to `chatgpt.com` still use your existing ChatGPT session.
