@@ -10,14 +10,6 @@
 
 </div>
 
-## Shows
-
-- 5-hour usage left
-- Weekly usage left
-- Plan
-- Credits
-- Reset times
-
 ## Install In Firefox
 
 1. Open `about:debugging#/runtime/this-firefox`.
@@ -25,12 +17,6 @@
 3. Select `manifest.json`.
 
 Firefox removes temporary add-ons when it restarts.
-
-## Use
-
-1. Sign in to ChatGPT in the same Firefox profile.
-2. Click the extension icon. It refreshes automatically.
-3. Click `Refresh` to retry manually.
 
 ## Notes
 
